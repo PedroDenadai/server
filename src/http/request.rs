@@ -42,14 +42,23 @@ fn try_from(buf: &[u8]) -> Result<Self, Self::Error>{
         let method: Method = method.parse()?;
 
         let mut query_string = None;
-        match path.find('?') {
-            Some(i) => {
-                query_string = Some(&path[i + 1..]);
-                path = &path[..i];
-            }
+        //match path.find('?') {
+          //  Some(i) => {
+            //    query_string = Some(&path[i + 1..]);
+              //  path = &path[..i];
+            //}
 
-            None => {},
+//            None => {},
+//      }
+
+        let q = path.find('?');
+        if q.is_some() {
+            let i = q.unwrap();
+            query_string = Some(&path[i + 1..]);
+            path = &path[..i];
         }
+
+
 
         unimplemented!()   
     }
