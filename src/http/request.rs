@@ -4,6 +4,7 @@ use super::method::{Method, MethodError};
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt::{Result as FmtResult, Display, Debug, Formatter};
+use super::{QueryString, QueryStringValue};
 
 
 
