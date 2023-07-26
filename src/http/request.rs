@@ -7,16 +7,18 @@ use std::fmt::{Result as FmtResult, Display, Debug, Formatter};
 
 
 
-pub struct Request{
-    path: String,
-    query_string: Option<String>,
+pub struct Request<'buf>{
+    path: &'buf str,
+    query_string: Option<&'buf str>,
     method: Method, // use super because of the scope of the struct 
 }
 
 
-impl TryFrom<&[u8]> for Request{
+impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
     type Error = ParseError;
-fn try_from(buf: &[u8]) -> Result<Self, Self::Error>{
+
+    // GET /search?name=abc&sort=1 HTTP/1.1\r\n...HEADERS...
+    fn try_from<'a>(buf: &'buf [u8]) -> Result<Request<'buf>, Self::Error>{
         //match str::from_utf8(buf){
             //Ok(request) => {}
             //Err(_) => return Err(ParseError::InvalidEncoding),}
@@ -51,22 +53,34 @@ fn try_from(buf: &[u8]) -> Result<Self, Self::Error>{
 //            None => {},
 //      }
 
-        let q = path.find('?');
-        if q.is_some() {
-            let i = q.unwrap();
+        //let q = path.find('?');
+        //if q.is_some() {
+          //  let i = q.unwrap();
+            //query_string = Some(&path[i + 1..]);
+            //path = &path[..i];
+        //}
+
+        if let Some(i) = path.find('?') {
             query_string = Some(&path[i + 1..]);
             path = &path[..i];
+
         }
 
+        Ok(Self{
+            path,
+            query_string,
+            method,
+        })
 
 
-        unimplemented!()   
+
+ 
     }
 }
 
 
 //recebe uma str e retorna um tuple que tem 2 valores, 1 que é a str de interesse (ate um espaco) e o resto da str
-fn get_word(request: &str) -> Option<(&str, &str)>{
+fn get_word<'a>(request: &'a str) -> Option<(&'a str, &'a str)>{ // the lifetime of both str that returns has to have the some lifetime
     //let mut iter = request.chars();
     //loop {
     //    let item = iter.next();
