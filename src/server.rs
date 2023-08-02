@@ -1,6 +1,6 @@
-use crate::http::Request;
+use crate::http::{Request, StatusCode, Response};
 use std::net::{TcpListener, TcpStream, SocketAddr};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
@@ -37,9 +37,14 @@ impl Server {
 
                             match Request::try_from(&buffer[..]) {// slice que tem todos os elementos do array (buffer)
                                 Ok(request) => {
-
+                                    dbg!(request);
+                                    let response = Response::new(StatusCode::Ok, Some("<h1>IT FUKING WORKS</h1>".to_string()),);
+                                    response.send(&mut stream);
                                 },
-                                Err(e) => println!("Failed to parse: {}", e),
+                                Err(e) =>{
+                                    println!("Failed to parse: {}", e);
+                                    Response::new(StatusCode::BadRequest, None).send(&mut stream);
+                                } 
 
                             }
                             
