@@ -1,69 +1,53 @@
-use crate::http::{Request, StatusCode, Response};
-use std::net::{TcpListener, TcpStream, SocketAddr};
-use std::io::{Read, Write};
+use crate::http::{ParseError, Request, Response, StatusCode};
 use std::convert::TryFrom;
-use std::convert::TryInto;
+use std::io::Read;
+use std::net::TcpListener;
 
+pub trait Handler {
+    fn handle_request(&mut self, request: &Request) -> Response;
+
+    fn handle_bad_request(&mut self, e: &ParseError) -> Response {
+        println!("Failed to parse request: {}", e);
+        Response::new(StatusCode::BadRequest, None)
+    }
+}
 
 pub struct Server {
     addr: String,
-
 }
 
 impl Server {
-    pub fn new(addr: String ) -> Self{
-        Self {
-            addr
-        }
+    pub fn new(addr: String) -> Self {
+        Self { addr }
     }
 
-    pub fn run(self){
+    pub fn run(self, mut handler: impl Handler) {
         println!("Listening on {}", self.addr);
 
         let listener = TcpListener::bind(&self.addr).unwrap();
 
-        loop{
-            match listener.accept(){
-                Ok((mut stream, _)) =>{
-                    
-                    let mut buffer = [0; 1024]; // tamanho da requisicao 1Kbytes
-                    
-                    match stream.read(&mut buffer){
+        loop {
+            match listener.accept() {
+                Ok((mut stream, _)) => {
+                    let mut buffer = [0; 1024];
+                    match stream.read(&mut buffer) {
+                        Ok(_) => {
+                            println!("Received a request: {}", String::from_utf8_lossy(&buffer));
 
-                        Ok(_)=>{
-                            println!("Received a request: {}", String::from_utf8_lossy(&buffer)); // pega a request e transforma de binary para texto
+                            let response = match Request::try_from(&buffer[..]) {
+                                Ok(request) => handler.handle_request(&request),
+                                Err(e) => handler.handle_bad_request(&e),
+                            };
 
-                            //let res: &Result<Request,  _> = &buffer[..].try_into(); outro jeito de implimentar o try_from
-
-                            match Request::try_from(&buffer[..]) {// slice que tem todos os elementos do array (buffer)
-                                Ok(request) => {
-                                    dbg!(request);
-                                    let response = Response::new(StatusCode::Ok, Some("<h1>IT FUKING WORKS</h1>".to_string()),);
-                                    response.send(&mut stream);
-                                },
-                                Err(e) =>{
-                                    println!("Failed to parse: {}", e);
-                                    Response::new(StatusCode::BadRequest, None).send(&mut stream);
-                                } 
-
+                            if let Err(e) = response.send(&mut stream) {
+                                println!("Failed to send response: {}", e);
                             }
-                            
                         }
-
-                        Err(e) => println!("Failed to connect: {}", e), 
+                        Err(e) => println!("Failed to read from connection: {}", e),
                     }
                 }
-
-                Err(e) => println!("Failed to connect: {}", e),
+                Err(e) => println!("Failed to establish a connection: {}", e),
             }
-            
-            
-            
-            
-            
-            //let res = listener.accept();
-            //if res.is_err(){continue;}
-            //let (stream, addr) = res.unwrap();
         }
     }
 }
